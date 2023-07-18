@@ -3,7 +3,6 @@
 import fs from "fs";
 import express from "express";
 import { getTokenCount } from "./get721TokenCount.js";
-import { getCached1155TokenIds } from "./get1155TokenIdsFromGraph.js";
 import cron from "node-cron";
 import { Request, Response } from "express";
 import { config } from "dotenv";
@@ -13,10 +12,9 @@ config();
 // Disable non-null assertion temporarily. Non-null assertion is checked at runtime, but TSC doesn't know that.
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 const env = {
-  JUICEBOX_CARDS_ADDRESS: process.env.JUICEBOX_CARDS_ADDRESS!,
-  JBPROJECTS_ADDRESS: process.env.JBPROJECTS_ADDRESS!,
+  NFT_ADDRESS: process.env.NFT_ADDRESS! as `0x${string}`,
+  ALCHEMY_RPC_URL: process.env.ALCHEMY_RPC_URL!,
   OPENSEA_API_KEY: process.env.OPENSEA_API_KEY!,
-  THEGRAPH_API_KEY: process.env.THEGRAPH_API_KEY!,
   CRON_FREQUENCY: Number(process.env.CRON_FREQUENCY!),
   MAX_RUNTIME: Number(process.env.MAX_RUNTIME!),
   BUCKET_SIZE: Number(process.env.BUCKET_SIZE!),
@@ -27,6 +25,7 @@ const env = {
   CONSECUTIVE_FAIL_RECOVERY_PERIOD: Number(
     process.env.CONSECUTIVE_FAIL_RECOVERY_PERIOD!
   ),
+  HEALTHCHECKS_ACTIVE: process.env.HEALTHCHECKS_ACTIVE!,
   HEALTHCHECKS_URL: process.env.HEALTHCHECKS_URL!,
 };
 /* eslint-enable @typescript-eslint/no-non-null-assertion */
@@ -73,7 +72,7 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Function to update OpenSea metadata for all JBProject tokens
+// Function to update OpenSea metadata for all NFTs in the collection
 async function fetchData(tokenId: number, contractAddress: string) {
   const url = `${BASE_URL}/${contractAddress}/${tokenId}/?force_update=true`;
   let requestSuccessful = false;
@@ -135,12 +134,14 @@ async function fetchAllData() {
   }
   isRunning = true;
   // Ping to indicate the job has started
-  await fetch(env.HEALTHCHECKS_URL + "/start", { method: "POST" });
+
+  env.HEALTHCHECKS_ACTIVE
+    ? await fetch(env.HEALTHCHECKS_URL + "/start", { method: "POST" })
+    : null;
 
   const startTime = Date.now(); // Start time
   let requestCount = 0; // To count the number of requests
-  let total721TokensFetched = 0; // Total 721 tokens fetched
-  let total1155TokensFetched = 0; // Total 1155 tokens fetched
+  let totalFetched = 0; // Total tokens fetched
   let operationStatus = "completed successfully";
 
   // Set a timeout to clear the failedRequests array and log an error message after env.MAX_RUNTIME minutes
@@ -152,12 +153,12 @@ async function fetchAllData() {
       "cron.log",
       `Operation timed out after ${
         env.MAX_RUNTIME
-      } minutes at ${new Date().toISOString()}.\nElapsed time: ${elapsedTime} seconds.\nTotal requests: ${requestCount}.\nTotal recovery periods: ${recoveryPeriods}.\nTotal 721 tokens fetched: ${total721TokensFetched}.\nTotal 1155 tokens fetched: ${total1155TokensFetched}.\n\n`
+      } minutes at ${new Date().toISOString()}.\nElapsed time: ${elapsedTime} seconds.\nTotal requests: ${requestCount}.\nTotal recovery periods: ${recoveryPeriods}.\nTotal 721 tokens fetched: ${totalFetched}.\n\n\n`
     );
     console.log(
       `Operation timed out after ${
         env.MAX_RUNTIME
-      } minutes at ${new Date().toISOString()}. Elapsed time: ${elapsedTime} seconds. Total requests: ${requestCount}. Total recovery periods: ${recoveryPeriods}. Total 721 tokens fetched: ${total721TokensFetched}. Total 1155 tokens fetched: ${total1155TokensFetched}.`
+      } minutes at ${new Date().toISOString()}. Elapsed time: ${elapsedTime} seconds. Total requests: ${requestCount}. Total recovery periods: ${recoveryPeriods}. Total 721 tokens fetched: ${totalFetched}..`
     );
 
     isRunning = false; // Remember to reset the lock after the task completes.
@@ -170,24 +171,10 @@ async function fetchAllData() {
       tokenId <= LAST_TOKEN_ID;
       tokenId++
     ) {
-      await fetchData(tokenId, env.JBPROJECTS_ADDRESS);
-      total721TokensFetched++;
+      await fetchData(tokenId, env.NFT_ADDRESS);
+      totalFetched++;
       requestCount++;
 
-      // If we've hit the env.BUCKET_SIZE, we wait for the env.LEAK_RATE before continuing
-      if (requestCount % env.BUCKET_SIZE === 0) {
-        await delay(env.LEAK_RATE);
-      }
-    }
-
-    // Fetch 1155 tokens
-    const tokenIds1155 = await getCached1155TokenIds(
-      env.JUICEBOX_CARDS_ADDRESS
-    );
-    for (const tokenId of tokenIds1155) {
-      await fetchData(tokenId, env.JUICEBOX_CARDS_ADDRESS);
-      total1155TokensFetched++;
-      requestCount++;
       // If we've hit the env.BUCKET_SIZE, we wait for the env.LEAK_RATE before continuing
       if (requestCount % env.BUCKET_SIZE === 0) {
         await delay(env.LEAK_RATE);
@@ -227,10 +214,10 @@ async function fetchAllData() {
     // Write the log to a file named 'cron.log'
     fs.appendFileSync(
       "cron.log",
-      `Operation ${operationStatus} at ${new Date().toISOString()}.\nElapsed time: ${elapsedTime} seconds.\nTotal requests: ${requestCount}.\nTotal recovery periods: ${recoveryPeriods}.\nTotal 721 tokens fetched: ${total721TokensFetched}.\nTotal 1155 tokens fetched: ${total1155TokensFetched}.\n\n`
+      `Operation ${operationStatus} at ${new Date().toISOString()}.\nElapsed time: ${elapsedTime} seconds.\nTotal requests: ${requestCount}.\nTotal recovery periods: ${recoveryPeriods}.\nTotal 721 tokens fetched: ${totalFetched}.\n\n\n`
     );
     console.log(
-      `Operation ${operationStatus} at ${new Date().toISOString()}. Elapsed time: ${elapsedTime} seconds. Total requests: ${requestCount}. Total recovery periods: ${recoveryPeriods}. Total 721 tokens fetched: ${total721TokensFetched}. Total 1155 tokens fetched: ${total1155TokensFetched}.`
+      `Operation ${operationStatus} at ${new Date().toISOString()}. Elapsed time: ${elapsedTime} seconds. Total requests: ${requestCount}. Total recovery periods: ${recoveryPeriods}. Total 721 tokens fetched: ${totalFetched}.`
     );
     clearTimeout(timeout);
     isRunning = false; // Remember to reset the lock after the task completes.

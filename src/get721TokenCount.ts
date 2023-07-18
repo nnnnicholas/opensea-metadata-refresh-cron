@@ -5,12 +5,28 @@ config();
 import { createPublicClient, http } from "viem";
 import { mainnet } from "viem/chains";
 
-const RPC = process.env.ALCHEMY_RPC_URL;
-const JBPROJECTS_ADDRESS = "0xD8B4359143eda5B2d763E127Ed27c77addBc47d3";
+const env = {
+  NFT_ADDRESS: process.env.NFT_ADDRESS! as `0x${string}`,
+  ALCHEMY_RPC_URL: process.env.ALCHEMY_RPC_URL!,
+  OPENSEA_API_KEY: process.env.OPENSEA_API_KEY!,
+  CRON_FREQUENCY: Number(process.env.CRON_FREQUENCY!),
+  MAX_RUNTIME: Number(process.env.MAX_RUNTIME!),
+  BUCKET_SIZE: Number(process.env.BUCKET_SIZE!),
+  LEAK_RATE: Number(process.env.LEAK_RATE!),
+  RETRY_LEAK_RATE: Number(process.env.RETRY_LEAK_RATE!),
+  FIRST_TOKEN_ID: Number(process.env.FIRST_TOKEN_ID!),
+  CONSECUTIVE_FAIL_LIMIT: Number(process.env.CONSECUTIVE_FAIL_LIMIT!),
+  CONSECUTIVE_FAIL_RECOVERY_PERIOD: Number(
+    process.env.CONSECUTIVE_FAIL_RECOVERY_PERIOD!
+  ),
+  HEALTHCHECKS_ACTIVE: process.env.HEALTHCHECKS_ACTIVE!,
+  HEALTHCHECKS_URL: process.env.HEALTHCHECKS_URL!,
+};
+
 const ABI = [
   {
     inputs: [],
-    name: "count",
+    name: "totalSupply",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
@@ -18,20 +34,20 @@ const ABI = [
 ] as const; // const assertion
 const client = createPublicClient({
   chain: mainnet,
-  transport: http(RPC ? RPC : ""), // use Alchemy RPC if available
+  transport: http(env.ALCHEMY_RPC_URL ? env.ALCHEMY_RPC_URL : ""), // use Alchemy RPC if available
 });
 
 const result = client.readContract({
   abi: ABI,
-  address: JBPROJECTS_ADDRESS,
-  functionName: "count",
+  address: env.NFT_ADDRESS,
+  functionName: "totalSupply",
 });
 
 export async function getTokenCount(): Promise<number> {
   const count = await result;
-  // console.log(`Total supply of JBProjects: ${count}`);
+  // console.log(`Total supply of NFT: ${count}`);
   return Number(count);
 }
 
 // For local testing
-getTokenCount().then((res) => console.log("Total supply of JBProjects:", res));
+getTokenCount().then((res) => console.log("Total supply of NFT:", res));
