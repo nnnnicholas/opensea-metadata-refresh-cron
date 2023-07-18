@@ -1,6 +1,6 @@
-# Juicebox Metadata Updater
+# Opensea Metadata Refresh Cron Job
 
-This cron process refreshes Juicebox Project NFT and Juicebox Cards metadata on Opensea. The metadata is updating as time elapses and transactions are made, and this utility helps keep Opensea's offchain cache, which many website and apps rely upon, up to date.
+This cron process refreshes an ERC-721 collection's metadata on Opensea on a given schedule. This utility makes it easy to keep OpenSea's offchain cache up-to-date for a given collection.
 
 ## Setup
 
@@ -9,8 +9,8 @@ This cron process refreshes Juicebox Project NFT and Juicebox Cards metadata on 
 Clone this repository:
 
 ```bash
-git clone https://github.com/yourusername/Juicebox-Metadata-Updater.git
-cd Juicebox-Metadata-Updater
+git clone https://github.com/yourusername/Opensea-Metadata-Refresh-Cron.git
+cd Opensea-Metadata-Refresh-Cron
 ```
 
 ### Install dependencies
