@@ -7,7 +7,7 @@ import { mainnet } from "viem/chains";
 
 const env = {
   NFT_ADDRESS: process.env.NFT_ADDRESS! as `0x${string}`,
-  ALCHEMY_RPC_URL: process.env.ALCHEMY_RPC_URL!,
+  RPC_URL: process.env.RPC_URL!,
   OPENSEA_API_KEY: process.env.OPENSEA_API_KEY!,
   CRON_FREQUENCY: Number(process.env.CRON_FREQUENCY!),
   MAX_RUNTIME: Number(process.env.MAX_RUNTIME!),
@@ -34,7 +34,7 @@ const ABI = [
 ] as const; // const assertion
 const client = createPublicClient({
   chain: mainnet,
-  transport: http(env.ALCHEMY_RPC_URL ? env.ALCHEMY_RPC_URL : ""), // use Alchemy RPC if available
+  transport: http(env.RPC_URL ? env.RPC_URL : ""), // use RPC if available
 });
 
 const result = client.readContract({
