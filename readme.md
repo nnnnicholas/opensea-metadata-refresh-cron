@@ -2,6 +2,8 @@
 
 This cron process refreshes an ERC-721 collection's metadata on Opensea on a given schedule. This utility makes it easy to keep OpenSea's offchain cache up-to-date for a given collection.
 
+Thanks to buidlguidl.com for supporting this release!
+
 ## Setup
 
 ### Getting started
